@@ -21,6 +21,6 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S %Z')] starting market_radar daily run"
 radar screener run
 radar news fetch --hours 24
 radar poll trades --cycles 1 --interval 60 || echo "block poll skipped/failed (non-fatal)"
-radar report run --no-screener --telegram --watchlists
+radar report run --no-screener --telegram --watchlists --options --options-top 20 --sentiment
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S %Z')] market_radar daily run complete"

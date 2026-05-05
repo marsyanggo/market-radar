@@ -63,12 +63,15 @@
 - [ ] `scripts/run_news_stream.py`：常駐執行
 - [ ] 驗證：開盤跑 1 小時看到新聞流入
 
-### 1.4 大單偵測（Trades WebSocket）
-- [ ] `src/alpaca/trades_stream.py`：訂閱 Trades WebSocket（focus on Top 50 watchlist）
-- [ ] 過濾 `size >= 10000` 寫入 `trades_blocks`
-- [ ] 標記 buy/sell side（用 quote 中價判斷）
-- [ ] `scripts/run_trades_stream.py`：常駐執行
-- [ ] 驗證：開盤跑 1 小時看到大單記錄
+### 1.4 大單偵測（Trades WebSocket + REST polling fallback） ✅
+- [x] `src/alpaca/trades_stream.py`：WebSocket 版（subscribe trades + quotes，buffer + flush，signal handlers）
+- [x] `src/alpaca/trades_poller.py`：REST polling 版（fallback：因 Alpaca free tier 限制 1 WS 連線，AI_trader price_stream 已佔用）
+- [x] Lee-Ready side classification（`classify_side` shared by 兩版）：trade ≥ ask → buy / ≤ bid → sell / 中價以上 buy / 中價以下 sell
+- [x] 過濾 `size >= threshold`（預設 10K）寫入 `trades_blocks`，REST 版用 `(symbol, ts, price, size, exchange)` 去重
+- [x] `scripts/run_trades_stream.py` + `radar stream trades` (WS) + `radar poll trades` (REST) CLI commands
+- [x] tests：`test_trades_stream.py`（7 個 side classification tests）；總計 34/34 過
+- [x] 驗證：poller 抓過去 24h trades → DB 寫入 2 筆 (NVDA 8081 sell, AAPL 5420 unknown)
+- [ ] **已知限制**：Alpaca free tier 同時只允許 1 個 WS；要使用 stream 版需先停 AI_trader 或升級帳號。日常使用 `radar poll trades` 即可
 
 ---
 

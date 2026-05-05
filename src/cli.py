@@ -66,6 +66,57 @@ def indicators_run(symbol: tuple[str, ...]) -> None:
 
 
 @cli.group()
+def stream() -> None:
+    """Real-time data stream commands."""
+
+
+@stream.command("trades")
+@click.option("--symbol", multiple=True, help="Specific symbols (default: stocks table)")
+@click.option("--threshold", default=10000, help="Block size threshold (shares)")
+@click.option("--flush", default=5.0, help="Flush interval seconds")
+def stream_trades(symbol: tuple[str, ...], threshold: int, flush: float) -> None:
+    """Subscribe to live trades via WebSocket. Requires an unused WS slot
+    (Alpaca free tier = 1 connection — conflicts with AI_trader price_stream).
+    Use `radar poll trades` if the WS slot is taken.
+    """
+    import asyncio
+
+    from src.alpaca.trades_stream import load_default_symbols, run_block_stream
+
+    symbols = list(symbol) if symbol else load_default_symbols()
+    if not symbols:
+        click.echo("no symbols — run `radar screener run` first", err=True)
+        return
+    click.echo(f"streaming blocks for {len(symbols)} symbols (threshold={threshold:,})")
+    asyncio.run(run_block_stream(symbols, block_threshold=threshold, flush_interval=flush))
+
+
+@cli.group()
+def poll() -> None:
+    """REST polling fallback (works alongside another WS consumer)."""
+
+
+@poll.command("trades")
+@click.option("--symbol", multiple=True, help="Specific symbols (default: stocks table)")
+@click.option("--threshold", default=10000, help="Block size threshold (shares)")
+@click.option("--interval", default=60.0, help="Poll interval seconds")
+@click.option("--cycles", type=int, default=None, help="Stop after N cycles (default: forever)")
+def poll_trades(symbol: tuple[str, ...], threshold: int, interval: float, cycles: int | None) -> None:
+    """REST polling for block trades — works while AI_trader stream is running."""
+    from src.alpaca.trades_poller import run_poller
+    from src.alpaca.trades_stream import load_default_symbols
+
+    symbols = list(symbol) if symbol else load_default_symbols()
+    if not symbols:
+        click.echo("no symbols — run `radar screener run` first", err=True)
+        return
+    click.echo(
+        f"polling {len(symbols)} symbols every {interval}s (threshold={threshold:,})"
+    )
+    run_poller(symbols, block_threshold=threshold, poll_interval=interval, max_cycles=cycles)
+
+
+@cli.group()
 def report() -> None:
     """Daily report commands."""
 

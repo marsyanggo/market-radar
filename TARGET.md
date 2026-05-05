@@ -56,12 +56,13 @@
 - [x] `scripts/daily_screener.py` + `radar screener run` CLI command
 - [x] 驗證：跑一次 → DB 38 筆資料（20 most-actives + 20 movers，去重）
 
-### 1.3 News Stream（即時）
-- [ ] `src/alpaca/news_stream.py`：訂閱 News WebSocket（Bloomberg/Benzinga）
-- [ ] 寫入 `news` 表（symbol, headline, source, url, ts, content）
-- [ ] 簡單 dedup（hash by url）
-- [ ] `scripts/run_news_stream.py`：常駐執行
-- [ ] 驗證：開盤跑 1 小時看到新聞流入
+### 1.3 News Fetcher（REST poller） ✅
+- [x] `src/alpaca/news.py`：REST 版本（`fetch_news` + `persist_news` + `fetch_and_persist` + `run_news_poller`）
+  - WebSocket 版略過（Alpaca free tier 1 個 WS 已被佔用，新聞 10 分鐘 cadence 足夠）
+- [x] 寫入 `news` 表，dedup by `external_id`（unique constraint）
+- [x] `radar news fetch` (one-shot) + `radar news poll` (long-running) CLI
+- [x] **修 bug**：`daily_pipeline` 原本用「今日凌晨」當 since_iso → 漏算前日晚間新聞；改成 24h rolling window
+- [x] 驗證：抓到 77 筆新聞，dedup 正確（重跑 0 inserted）；SKK/PN heat 從 30 升到 50（news_density=8）
 
 ### 1.4 大單偵測（Trades WebSocket + REST polling fallback） ✅
 - [x] `src/alpaca/trades_stream.py`：WebSocket 版（subscribe trades + quotes，buffer + flush，signal handlers）

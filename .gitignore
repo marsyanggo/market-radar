@@ -58,3 +58,4 @@ htmlcov/
 
 # Claude Code session files (local only)
 SAVE.md
+.claude/settings.local.json

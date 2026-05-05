@@ -4,7 +4,7 @@ Reads bars once per symbol (already cached by indicator step), then computes
 heat scores using the same data. Wires into existing repos.
 """
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from src.alpaca.bars import fetch_daily_bars_batch
@@ -32,9 +32,10 @@ def run_daily_pipeline(
     batch_size: int = 50,
 ) -> dict:
     """Run the full daily pipeline. Returns counts + report path."""
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    yesterday_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT00:00:00Z")
-    logger.info(f"=== daily pipeline start (as_of {today}) ===")
+    now = datetime.now(timezone.utc)
+    today = now.strftime("%Y-%m-%d")
+    window_start_iso = (now - timedelta(hours=24)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    logger.info(f"=== daily pipeline start (as_of {today}, window from {window_start_iso}) ===")
 
     # 1. Screener
     if refresh_universe:
@@ -78,8 +79,8 @@ def run_daily_pipeline(
                     technicals_n += 1
 
                 # auxiliary signals (mostly 0 until later phases)
-                news_count = news_repo.count_for_symbol(sym, since_iso=yesterday_iso)
-                uoa_count = uoa_repo.count_for_symbol(sym, since_iso=yesterday_iso)
+                news_count = news_repo.count_for_symbol(sym, since_iso=window_start_iso)
+                uoa_count = uoa_repo.count_for_symbol(sym, since_iso=window_start_iso)
 
                 heat = compute_heat(
                     symbol=sym,

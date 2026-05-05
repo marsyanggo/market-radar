@@ -117,6 +117,35 @@ def poll_trades(symbol: tuple[str, ...], threshold: int, interval: float, cycles
 
 
 @cli.group()
+def news() -> None:
+    """News commands."""
+
+
+@news.command("fetch")
+@click.option("--hours", default=24.0, help="Look back this many hours")
+@click.option("--limit", default=50, help="Max items per fetch")
+@click.option("--symbol", multiple=True, help="Specific symbols (default: all in stocks table)")
+def news_fetch(hours: float, limit: int, symbol: tuple[str, ...]) -> None:
+    """One-shot news fetch + persist with dedup."""
+    from src.alpaca.news import fetch_and_persist, load_default_symbols
+
+    symbols = list(symbol) if symbol else load_default_symbols()
+    counts = fetch_and_persist(symbols=symbols, hours_back=hours, limit=limit)
+    click.echo(f"news done: {counts}")
+
+
+@news.command("poll")
+@click.option("--interval", default=600.0, help="Poll interval seconds (default 10 min)")
+@click.option("--cycles", type=int, default=None, help="Stop after N cycles")
+def news_poll(interval: float, cycles: int | None) -> None:
+    """Long-running news poller (10 min default cadence)."""
+    from src.alpaca.news import load_default_symbols, run_news_poller
+
+    symbols = load_default_symbols()
+    run_news_poller(symbols=symbols, poll_interval=interval, max_cycles=cycles)
+
+
+@cli.group()
 def report() -> None:
     """Daily report commands."""
 

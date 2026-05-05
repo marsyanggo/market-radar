@@ -12,7 +12,6 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from src.db.connection import get_conn
@@ -180,11 +179,7 @@ def health() -> dict:
     return {"ok": True, "schema_version": ver["v"], "n_stocks": n_stocks["n"]}
 
 
-# Static frontend
+# Static frontend — mount LAST so /api/* routes win.
+# StaticFiles(html=True) auto-serves index.html for "/".
 if WEB_DIR.exists():
     app.mount("/", StaticFiles(directory=str(WEB_DIR), html=True), name="web")
-
-
-@app.get("/")
-def index() -> FileResponse:
-    return FileResponse(WEB_DIR / "index.html")

@@ -4,6 +4,8 @@
 
 > English version: [USER_GUIDE.md](./USER_GUIDE.md)
 
+> ⚠️ **使用前**：請先閱讀 [DISCLAIMER.md](./DISCLAIMER.md)。本軟體為研究/教育工具；不是投資建議，您須自負所有交易風險。授權條款為 [PolyForm-NC 1.0.0](./LICENSE)（僅供非商業使用）。
+
 ---
 
 ## 1. 環境需求

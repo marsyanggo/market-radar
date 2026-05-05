@@ -4,6 +4,8 @@ This guide covers day-to-day operation of Market Radar: installation, configurat
 
 > 繁體中文版本：[USER_GUIDE.zh-TW.md](./USER_GUIDE.zh-TW.md)
 
+> ⚠️ **Before using**: read [DISCLAIMER.md](./DISCLAIMER.md). This software is a research/educational tool; it is not investment advice and you assume all trading risk. Licensed under [PolyForm-NC 1.0.0](./LICENSE) (noncommercial use only).
+
 ---
 
 ## 1. Prerequisites

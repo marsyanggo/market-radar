@@ -93,9 +93,16 @@ Python 3.10+ · alpaca-py · ta (technical-indicator library) · py_vollib · SQ
 
 - **[USER_GUIDE.md](./USER_GUIDE.md)** — full English operations guide
 - **[USER_GUIDE.zh-TW.md](./USER_GUIDE.zh-TW.md)** — 繁體中文操作指南
+- **[DISCLAIMER.md](./DISCLAIMER.md)** — financial / trading disclaimer (bilingual). **Read this before using.**
 - **[TARGET.md](./TARGET.md)** — phase-by-phase implementation history
 - **[SAVE.md](./SAVE.md)** — session journal (gitignored, local only)
 
 ## License
 
-Private. Personal project.
+Licensed under the [PolyForm Noncommercial License 1.0.0](./LICENSE).
+
+In short: **free for personal, research, educational, and noncommercial use**. Commercial use is **not permitted** without a separate license. See `LICENSE` for the binding terms.
+
+## Disclaimer (read before using)
+
+This is a research and educational tool. It is **not** investment advice; the author is **not** a registered investment advisor; past or backtested performance does **not** predict future results; you assume **all** trading risk. The full disclaimer is in [DISCLAIMER.md](./DISCLAIMER.md). By using this software you accept those terms.

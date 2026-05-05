@@ -5,7 +5,7 @@ description = "Daily pre-market stock screening and recommendation system"
 authors = [{ name = "Mars Yang", email = "marsyanggo@gmail.com" }]
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "Proprietary" }
+license = { text = "PolyForm-Noncommercial-1.0.0" }
 
 dependencies = [
     "alpaca-py>=0.30.0",

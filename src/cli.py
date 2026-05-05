@@ -50,5 +50,20 @@ def screener_run(most_actives: int, movers: int) -> None:
     click.echo(f"screener done: {counts}")
 
 
+@cli.group()
+def indicators() -> None:
+    """Technical indicators commands."""
+
+
+@indicators.command("run")
+@click.option("--symbol", multiple=True, help="Specific symbols (default: all in stocks table)")
+def indicators_run(symbol: tuple[str, ...]) -> None:
+    """Compute and persist EOD technical indicators."""
+    from src.indicators.eod import run_eod_indicators
+
+    counts = run_eod_indicators(symbols=list(symbol) if symbol else None)
+    click.echo(f"indicators done: {counts}")
+
+
 if __name__ == "__main__":
     cli()

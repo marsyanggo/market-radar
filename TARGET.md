@@ -72,20 +72,21 @@
 
 ---
 
-## Phase 2 — 技術指標模組（1 天）
+## Phase 2 — 技術指標模組（1 天） ✅
 
 **目標**：每日盤後計算所有觀察股的技術指標，存進 DB。
 
-- [ ] 安裝 `pandas-ta`（純 python，不用 TA-Lib C 套件）
-- [ ] `src/indicators/technical.py`：函式 `compute_all(symbol, df_bars) -> dict`
-  - [ ] RSI(14)、MACD、20/50/200 SMA、Bollinger Bands、ATR(14)
-  - [ ] 52w high/low、距 52w high/low 百分比
-  - [ ] Volume Profile（簡化版：近 20 日 POC）
-- [ ] `src/alpaca/bars.py`：抓 daily/hourly bars（StockBars API）
-- [ ] `src/db/schema.sql` 新增 `technical_indicators` 表
-- [ ] `scripts/eod_indicators.py`：每日盤後（16:30 ET）對所有 watchlist 跑一次
-- [ ] tests：`tests/test_technical.py`（用固定資料驗證指標數值）
-- [ ] 驗證：對 NVDA 跑 → 數值 sanity check（RSI 0-100、MACD 有正負）
+- [x] 安裝 `ta` library（取代停更的 pandas-ta）
+- [x] `src/indicators/technical.py`：`compute_all(symbol, df_bars, as_of) -> TechnicalSnapshot`
+  - [x] RSI(14)、MACD（12/26/9）、20/50/200 SMA、Bollinger Bands(20,2)、ATR(14)
+  - [x] 52w high/low、距 52w high/low 百分比
+  - [ ] Volume Profile（簡化版：近 20 日 POC） — 延後到需要時再做
+- [x] `src/alpaca/bars.py`：`fetch_daily_bars` + `fetch_daily_bars_batch`（含 IEX feed 支援）
+- [x] `technical_indicators` 表（Phase 1.1 已建）+ `TechnicalsRepo.upsert/get`
+- [x] `src/indicators/eod.py`：runner（依 stocks 表逐批抓 bars + 算指標 + upsert）
+- [x] `scripts/eod_indicators.py` + `radar indicators run` CLI
+- [x] tests：`tests/test_technical.py`（4 tests，過 14/14 全測試）
+- [x] 驗證：對 38 檔跑 → DB 寫入 37 筆（1 檔資料不足 skipped）；NVDA close=198.56 RSI=53 MACD~0 52w-high pct=-8.3%
 
 ---
 

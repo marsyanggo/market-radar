@@ -243,6 +243,57 @@ class UoaRepo:
 
 
 # ============================================================
+# technical_indicators
+# ============================================================
+class TechnicalsRepo:
+    def __init__(self, conn: sqlite3.Connection) -> None:
+        self.conn = conn
+
+    def upsert(self, snap) -> None:
+        """Accepts a TechnicalSnapshot dataclass from src.indicators.technical."""
+        self.conn.execute(
+            """
+            INSERT INTO technical_indicators
+              (symbol, as_of, close, rsi_14, macd, macd_signal, macd_hist,
+               sma_20, sma_50, sma_200, bb_upper, bb_middle, bb_lower, atr_14,
+               high_52w, low_52w, pct_from_high_52w, pct_from_low_52w)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(symbol, as_of) DO UPDATE SET
+              close=excluded.close,
+              rsi_14=excluded.rsi_14,
+              macd=excluded.macd,
+              macd_signal=excluded.macd_signal,
+              macd_hist=excluded.macd_hist,
+              sma_20=excluded.sma_20,
+              sma_50=excluded.sma_50,
+              sma_200=excluded.sma_200,
+              bb_upper=excluded.bb_upper,
+              bb_middle=excluded.bb_middle,
+              bb_lower=excluded.bb_lower,
+              atr_14=excluded.atr_14,
+              high_52w=excluded.high_52w,
+              low_52w=excluded.low_52w,
+              pct_from_high_52w=excluded.pct_from_high_52w,
+              pct_from_low_52w=excluded.pct_from_low_52w
+            """,
+            (
+                snap.symbol, snap.as_of, snap.close,
+                snap.rsi_14, snap.macd, snap.macd_signal, snap.macd_hist,
+                snap.sma_20, snap.sma_50, snap.sma_200,
+                snap.bb_upper, snap.bb_middle, snap.bb_lower, snap.atr_14,
+                snap.high_52w, snap.low_52w, snap.pct_from_high_52w, snap.pct_from_low_52w,
+            ),
+        )
+
+    def get(self, symbol: str, as_of: str) -> dict[str, Any] | None:
+        row = self.conn.execute(
+            "SELECT * FROM technical_indicators WHERE symbol=? AND as_of=?",
+            (symbol, as_of),
+        ).fetchone()
+        return dict(row) if row else None
+
+
+# ============================================================
 # heat_scores
 # ============================================================
 class HeatScoresRepo:

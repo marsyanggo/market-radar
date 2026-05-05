@@ -42,12 +42,13 @@
 
 **目標**：能每日抓熱門股、即時偵測大單、接收新聞，存到 SQLite。
 
-### 1.1 資料庫設計
-- [ ] `src/db/schema.sql`：建表 `stocks`、`trades_blocks`、`news`、`uoa`、`heat_scores`、`recommendations`
-- [ ] `src/db/connection.py`：SQLite 連線池（`data/radar.db`）
-- [ ] `src/db/migrations.py`：版本化 schema（簡單版即可）
-- [ ] `src/db/repos.py`：CRUD repository（StocksRepo, TradesRepo, NewsRepo, UoaRepo）
-- [ ] tests：`tests/test_db_repos.py`（基本 CRUD 測試）
+### 1.1 資料庫設計 ✅
+- [x] `src/db/schema.sql`：建表 `stocks`、`trades_blocks`、`news`、`uoa`、`heat_scores`、`recommendations`、`technical_indicators`、`schema_version`
+- [x] `src/db/connection.py`：SQLite 連線（WAL mode、foreign keys、Row factory、transaction context manager）
+- [x] `src/db/migrations.py`：版本化 schema（base + 線性 migrations）
+- [x] `src/db/repos.py`：StocksRepo / TradesRepo / NewsRepo / UoaRepo / HeatScoresRepo / RecommendationsRepo（with dataclass models）
+- [x] `radar db init` CLI command
+- [x] tests：`tests/test_db_repos.py`（10 tests，全過）
 
 ### 1.2 Alpaca client wrapper
 - [ ] `src/alpaca/client.py`：包裝 alpaca-py 的 REST/Stream client（自動 retry、rate limit）

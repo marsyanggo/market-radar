@@ -20,5 +20,19 @@ def ping() -> None:
     click.echo(f"  alpaca_feed:  {settings.alpaca_data_feed}")
 
 
+@cli.group()
+def db() -> None:
+    """Database commands."""
+
+
+@db.command("init")
+def db_init() -> None:
+    """Create or migrate the SQLite schema."""
+    from src.db.migrations import init_db
+
+    version = init_db()
+    click.echo(f"DB ready at version {version}")
+
+
 if __name__ == "__main__":
     cli()

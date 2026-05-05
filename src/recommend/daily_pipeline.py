@@ -24,7 +24,9 @@ from src.options.runner import run_options_pipeline
 from src.output.markdown_report import render_report, write_report
 from src.output.telegram import send_daily_summary
 from src.output.watchlist_writer import write_watchlists
-from src.recommend.engine_v1 import classify
+from src.recommend.engine_v1 import classify as classify_v1
+from src.recommend.engine_v2 import classify as classify_v2
+from src.recommend.signals import SignalSnapshot
 from src.scoring.heat import compute_heat
 
 
@@ -37,6 +39,7 @@ def run_daily_pipeline(
     write_watchlists_files: bool = False,
     run_options: bool = False,
     options_top_n: int = 20,
+    use_v2: bool = True,
 ) -> dict:
     """Run the full daily pipeline. Returns counts + report path."""
     now = datetime.now(timezone.utc)
@@ -127,24 +130,57 @@ def run_daily_pipeline(
 
                 # 5. Classify
                 if snap is not None:
-                    rec = classify(
-                        symbol=sym,
-                        as_of=today,
-                        heat_score=heat.heat_score,
-                        rsi_14=snap.rsi_14,
-                        close=snap.close,
-                        sma_20=snap.sma_20,
-                    )
-                    if rec is not None:
-                        rec_repo.upsert(
-                            symbol=rec.symbol,
-                            as_of=rec.as_of,
-                            category=rec.category,
-                            heat_score=rec.heat_score,
-                            entry_price=rec.close,
-                            reason=rec.reason,
+                    if use_v2:
+                        # Pull options metrics if available
+                        flow_row = conn.execute(
+                            "SELECT put_call_ratio, iv_skew_25d, smart_money_score FROM option_flow WHERE symbol=? AND as_of=?",
+                            (sym, today),
+                        ).fetchone()
+                        sig_snap = SignalSnapshot(
+                            heat_score=heat.heat_score,
+                            smart_money_score=flow_row["smart_money_score"] if flow_row else None,
+                            rsi_14=snap.rsi_14,
+                            close=snap.close,
+                            sma_20=snap.sma_20,
+                            sma_50=snap.sma_50,
+                            sma_200=snap.sma_200,
+                            atr_14=snap.atr_14,
+                            volume_vs_adv=heat.volume_vs_adv,
+                            pct_from_high_52w=snap.pct_from_high_52w,
+                            put_call_ratio=flow_row["put_call_ratio"] if flow_row else None,
+                            iv_skew_25d=flow_row["iv_skew_25d"] if flow_row else None,
                         )
-                        rec_n += 1
+                        rec = classify_v2(symbol=sym, as_of=today, snap=sig_snap)
+                        if rec.category in ("strong_long", "watch", "avoid"):
+                            rec_repo.upsert(
+                                symbol=rec.symbol,
+                                as_of=rec.as_of,
+                                category=rec.category,
+                                heat_score=heat.heat_score,
+                                smart_money_score=sig_snap.smart_money_score,
+                                entry_price=snap.close,
+                                reason={
+                                    "weighted_score": rec.weighted_score,
+                                    "bullish_signals": rec.reason_signals,
+                                    "bullish_count": rec.bullish_count,
+                                    "bearish_count": rec.bearish_count,
+                                    "risk_score": rec.risk.score if rec.risk else None,
+                                    "risk_reasons": rec.risk.reasons if rec.risk else [],
+                                },
+                            )
+                            rec_n += 1
+                    else:
+                        rec = classify_v1(
+                            symbol=sym, as_of=today,
+                            heat_score=heat.heat_score, rsi_14=snap.rsi_14,
+                            close=snap.close, sma_20=snap.sma_20,
+                        )
+                        if rec is not None:
+                            rec_repo.upsert(
+                                symbol=rec.symbol, as_of=rec.as_of, category=rec.category,
+                                heat_score=rec.heat_score, entry_price=rec.close, reason=rec.reason,
+                            )
+                            rec_n += 1
 
     # 6. Report
     report_path: Path = write_report(today)

@@ -200,6 +200,32 @@ def options_run(symbol: tuple[str, ...]) -> None:
 
 
 @cli.group()
+def backtest() -> None:
+    """Backtest commands."""
+
+
+@backtest.command("run")
+@click.option("--lookback", default=60, help="Backtest window in trading days")
+@click.option("--symbol", multiple=True, help="Specific symbols (default: stocks table)")
+@click.option("--write", is_flag=True, help="Write report to reports/backtest_<date>.md")
+def backtest_run(lookback: int, symbol: tuple[str, ...], write: bool) -> None:
+    """Replay engine_v2 against historical bars and report stats."""
+    from datetime import datetime, timezone
+    from configs.settings import settings
+    from src.backtest.replay import render_report, run_backtest
+
+    syms = list(symbol) if symbol else None
+    summary = run_backtest(symbols=syms, lookback_days=lookback)
+    report = render_report(summary)
+    click.echo(report)
+    if write:
+        path = settings.reports_dir / f"backtest_{datetime.now(timezone.utc):%Y-%m-%d}.md"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(report, encoding="utf-8")
+        click.echo(f"\nwritten → {path}")
+
+
+@cli.group()
 def telegram() -> None:
     """Telegram commands."""
 

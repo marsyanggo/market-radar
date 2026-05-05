@@ -159,23 +159,27 @@
 
 ---
 
-## Phase 6 — 推薦引擎進階版（2 天）
+## Phase 6 — 推薦引擎進階版（2 天） ✅
 
 **目標**：多訊號共振規則引擎、風險評分、回測。
 
-- [ ] `src/recommend/engine_v2.py`：共振規則
-  - [ ] 至少 3 個獨立訊號同向才推薦
-  - [ ] 每個訊號獨立 score → 加權平均
-- [ ] `src/recommend/risk_score.py`：
-  - [ ] 過熱判斷（Heat > 90 + RSI > 80）
-  - [ ] 財報前 3 天黑名單（yfinance earnings calendar）
-  - [ ] 流動性過濾（avg volume > 500K）
-- [ ] `src/backtest/replay.py`：用歷史資料模擬推薦 → 計算勝率
-  - [ ] 假設進場 = 推薦次日開盤
-  - [ ] 5 日 / 20 日後報酬
-  - [ ] 勝率、平均報酬、Sharpe
-- [ ] tests：`tests/test_engine_v2.py`
-- [ ] 驗證：跑近 30 天回測，輸出勝率報表
+- [x] `src/recommend/signals.py`：7 個獨立 scorer (heat / smart_money / technical_alignment / rsi / volume / options_skew / 52w)，每個 0-100，None 若資料不足
+- [x] `src/recommend/risk_score.py`：assess_risk → veto + score + reasons
+  - veto: overheated (heat>90+RSI>80) / earnings 內 ≤4 天
+  - score: 流動性 (<500K avg vol) / penny stock (<$5) / 高 ATR (>8%) / 跌破 50MA 8%
+- [x] `src/recommend/engine_v2.py`：classify based on bullish/bearish 共振計數
+  - strong_long: ≥4 bullish, ≤1 bearish, weighted ≥ 65, no veto
+  - watch: ≥3 bullish, no veto
+  - avoid: veto OR (≥3 bearish + heat ≥ 60)
+- [x] daily_pipeline 接 v2（v1 fallback via `use_v2=False`）；reason 欄位記錄 weighted_score / bullish_signals / risk_reasons
+- [x] `src/backtest/replay.py`：歷史 bar 重播
+  - 對每天 D：computeAll(bars[:D]) → engine_v2 classify → entry=open[D+1]
+  - 5d / 20d return；hit rate；Sharpe (5d)
+  - 注意：歷史只能用 technical+volume signals（SM / news / UOA 沒有歷史資料）
+- [x] `radar backtest run --lookback 60 --symbol ...` CLI
+- [x] tests：`test_engine_v2.py`（17 tests：signals + risk + classify）；總計 62/62 過
+- [x] 驗證：18 個推薦產生（含 1 strong_long: BB；NOK watch with SM 75）；BZAI/SKK 風險原因正確標出
+- [x] **回測發現**（10 mega caps, 60d lookback）：watch 36.6% win 5d / strong_long 0% — pure-technical 不夠，正好驗證 Phase 4 options data 的必要性
 
 ---
 

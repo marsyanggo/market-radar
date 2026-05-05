@@ -21,18 +21,20 @@
 
 ---
 
-## Phase 0 — 專案初始化（0.5 天）
+## Phase 0 — 專案初始化（0.5 天） ✅
 
 **目標**：建立 repo 骨架與基礎設定，能跑 hello world。
 
-- [ ] 建立目錄結構：`market_radar/{src,data,reports,tests,scripts,configs}`
-- [ ] `pyproject.toml` / `requirements.txt`（python 3.10+、alpaca-py、pandas、pydantic、httpx、loguru）
-- [ ] `.env.example`（Alpaca key、Telegram token、Claude API key）
-- [ ] `configs/settings.py`（pydantic-settings 讀 env）
-- [ ] `src/logger.py`（loguru 設定，輸出到 `logs/radar_YYYY-MM-DD.log`）
-- [ ] `README.md` 簡介 + 啟動方式
-- [ ] git init + `.gitignore`（含 `.env`、`logs/`、`*.db`、`reports/`）
-- [ ] 驗證：`python -m src.cli ping` → 印出 "Market Radar OK"
+- [x] 建立目錄結構：`market_radar/{src,data,reports,tests,scripts,configs,logs}` + 子模組（db, alpaca, indicators, scoring, recommend, output, sentiment, options, edgar）
+- [x] `pyproject.toml`（python 3.10+、alpaca-py、pandas、ta、pydantic-settings、loguru、click、anthropic、yfinance、py_vollib；optional dev/sentiment groups）
+- [x] `.env.example`（Alpaca、Telegram、Anthropic、Reddit key + DB / log / reports / aitrader paths）
+- [x] `configs/settings.py`（pydantic-settings 讀 .env，含 is_paper helper）
+- [x] `src/logger.py`（loguru 設定，輸出到 `logs/radar_YYYY-MM-DD.log` + stderr，rotate daily, retain 30 days）
+- [x] `src/cli.py`（click group，`radar ping` command）
+- [x] `README.md` 簡介 + 啟動方式
+- [x] git init + `.gitignore`（含 `.env`、`logs/`、`*.db`、`reports/`、`.venv/`）
+- [x] GitHub repo `marsyanggo/market-radar`（private）+ GPG-signed initial commit + push
+- [x] 驗證：`radar ping` → 印出 "Market Radar OK" + log 檔案產生
 
 ---
 

@@ -25,7 +25,22 @@ Python 3.10+ · alpaca-py · pandas-ta · py_vollib · SQLite · loguru · Claud
 ## 啟動
 
 ```bash
-# TODO: 待 Phase 0 完成後填入
+# 1. 建立 venv（需要 python 3.10+）
+python3.11 -m venv .venv
+source .venv/bin/activate
+
+# 2. 安裝
+pip install -e .             # runtime
+pip install -e ".[dev]"      # 加開發工具
+pip install -e ".[sentiment]"  # 加 reddit / google trends（Phase 5）
+
+# 3. 設定環境變數
+cp .env.example .env
+# 編輯 .env 填入 alpaca / telegram / anthropic key
+
+# 4. 驗證
+radar ping
+# → Market Radar OK
 ```
 
 ## License

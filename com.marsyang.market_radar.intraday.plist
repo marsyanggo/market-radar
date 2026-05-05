@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.marsyang.market_radar.intraday</string>
+
+    <!-- Lite hourly intraday refresh during US market hours.
+         Times below are MAC LOCAL (PT). DST in effect:
+           07:30 PT = 10:30 ET  (1h after open)
+           08:30 PT = 11:30 ET
+           09:30 PT = 12:30 ET
+           10:30 PT = 13:30 ET
+           11:30 PT = 14:30 ET
+           12:30 PT = 15:30 ET  (30 min before close)
+         Total: 6 hourly snapshots (the daily run at 06:30 PT = market open is the 7th).
+
+         Weekend skip is handled in run_intraday.sh (date +%u).
+         Outside DST (Nov-Mar) shift everything +1h or accept the early-by-1h drift. -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/marsyang/workspace/market_radar/scripts/run_intraday.sh</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/marsyang/workspace/market_radar</string>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>StartCalendarInterval</key>
+    <array>
+        <dict><key>Hour</key><integer>7</integer><key>Minute</key><integer>30</integer></dict>
+        <dict><key>Hour</key><integer>8</integer><key>Minute</key><integer>30</integer></dict>
+        <dict><key>Hour</key><integer>9</integer><key>Minute</key><integer>30</integer></dict>
+        <dict><key>Hour</key><integer>10</integer><key>Minute</key><integer>30</integer></dict>
+        <dict><key>Hour</key><integer>11</integer><key>Minute</key><integer>30</integer></dict>
+        <dict><key>Hour</key><integer>12</integer><key>Minute</key><integer>30</integer></dict>
+    </array>
+
+    <key>StandardOutPath</key>
+    <string>/Users/marsyang/workspace/market_radar/logs/intraday_stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/marsyang/workspace/market_radar/logs/intraday_stderr.log</string>
+</dict>
+</plist>

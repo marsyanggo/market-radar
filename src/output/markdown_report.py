@@ -123,3 +123,75 @@ def write_report(as_of: str) -> Path:
     path = settings.reports_dir / f"{as_of}.md"
     path.write_text(render_report(as_of), encoding="utf-8")
     return path
+
+
+def render_intraday_report(as_of: str, slot: str) -> str:
+    """Compact hourly report — top heat + recommendation deltas only."""
+    with get_conn() as conn:
+        heat_rows = conn.execute(
+            """
+            SELECT h.symbol, h.heat_score, h.volume_vs_adv,
+                   t.close, t.rsi_14, t.sma_20,
+                   s.sentiment_score AS sent
+            FROM heat_scores h
+            LEFT JOIN technical_indicators t
+              ON t.symbol = h.symbol AND t.as_of = h.as_of
+            LEFT JOIN sentiment_daily s
+              ON s.symbol = h.symbol AND s.as_of = h.as_of
+            WHERE h.as_of = ?
+            ORDER BY h.heat_score DESC
+            LIMIT 8
+            """,
+            (as_of,),
+        ).fetchall()
+
+        recs = conn.execute(
+            """
+            SELECT symbol, category, heat_score, entry_price
+            FROM recommendations
+            WHERE as_of = ?
+            ORDER BY heat_score DESC
+            """,
+            (as_of,),
+        ).fetchall()
+
+    lines: list[str] = []
+    lines.append(f"_Intraday slot {slot} UTC — {as_of}_\n")
+
+    lines.append("🔥 *Top Heat*")
+    for i, r in enumerate(heat_rows, 1):
+        vol = f"{r['volume_vs_adv']:.1f}×" if r["volume_vs_adv"] else "—"
+        rsi = f"{r['rsi_14']:.0f}" if r["rsi_14"] else "—"
+        close = f"${r['close']:.2f}" if r["close"] else "—"
+        sent = f" sent {r['sent']:.0f}" if r["sent"] is not None else ""
+        lines.append(
+            f"{i}. *{r['symbol']}* heat {r['heat_score']:.0f} · {close} · vol {vol} · rsi {rsi}{sent}"
+        )
+
+    by_cat: dict[str, list] = {"strong_long": [], "watch": [], "avoid": []}
+    for r in recs:
+        if r["category"] in by_cat:
+            by_cat[r["category"]].append(r)
+
+    if by_cat["strong_long"]:
+        lines.append("\n✅ *Strong Long*")
+        for r in by_cat["strong_long"][:6]:
+            lines.append(f"  • {r['symbol']} heat {r['heat_score']:.0f} @ ${r['entry_price']:.2f}")
+    if by_cat["watch"]:
+        lines.append("\n📊 *Watch*")
+        for r in by_cat["watch"][:8]:
+            lines.append(f"  • {r['symbol']} heat {r['heat_score']:.0f}")
+    if by_cat["avoid"]:
+        lines.append("\n❌ *Avoid*")
+        for r in by_cat["avoid"][:5]:
+            lines.append(f"  • {r['symbol']} heat {r['heat_score']:.0f}")
+
+    return "\n".join(lines)
+
+
+def write_intraday_report(as_of: str, slot: str) -> Path:
+    settings.reports_dir.mkdir(parents=True, exist_ok=True)
+    safe_slot = slot.replace(":", "")
+    path = settings.reports_dir / f"{as_of}_intraday_{safe_slot}.md"
+    path.write_text(render_intraday_report(as_of, slot), encoding="utf-8")
+    return path

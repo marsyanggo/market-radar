@@ -34,5 +34,21 @@ def db_init() -> None:
     click.echo(f"DB ready at version {version}")
 
 
+@cli.group()
+def screener() -> None:
+    """Screener commands."""
+
+
+@screener.command("run")
+@click.option("--most-actives", default=50, help="Top N most-active stocks")
+@click.option("--movers", default=25, help="Top N gainers + losers each")
+def screener_run(most_actives: int, movers: int) -> None:
+    """Fetch most-actives + movers and upsert into `stocks`."""
+    from src.alpaca.screener import run_daily_screener
+
+    counts = run_daily_screener(most_actives_top=most_actives, movers_top=movers)
+    click.echo(f"screener done: {counts}")
+
+
 if __name__ == "__main__":
     cli()

@@ -50,11 +50,11 @@
 - [x] `radar db init` CLI command
 - [x] tests：`tests/test_db_repos.py`（10 tests，全過）
 
-### 1.2 Alpaca client wrapper
-- [ ] `src/alpaca/client.py`：包裝 alpaca-py 的 REST/Stream client（自動 retry、rate limit）
-- [ ] `src/alpaca/screener.py`：`get_most_actives()` + `get_movers()` → 寫入 `stocks` 表
-- [ ] `scripts/daily_screener.py`：每日跑一次抓 Top 50 熱門股
-- [ ] 驗證：跑一次 → DB 看到資料
+### 1.2 Alpaca client wrapper ✅
+- [x] `src/alpaca/client.py`：ScreenerClient + StockHistoricalDataClient factories + `with_retry` decorator（exponential backoff）
+- [x] `src/alpaca/screener.py`：`fetch_most_actives()` + `fetch_market_movers()` → upsert into `stocks`
+- [x] `scripts/daily_screener.py` + `radar screener run` CLI command
+- [x] 驗證：跑一次 → DB 38 筆資料（20 most-actives + 20 movers，去重）
 
 ### 1.3 News Stream（即時）
 - [ ] `src/alpaca/news_stream.py`：訂閱 News WebSocket（Bloomberg/Benzinga）

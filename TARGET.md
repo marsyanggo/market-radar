@@ -144,18 +144,26 @@
 
 ---
 
-## Phase 5 — 情緒分析（1-2 天）
+## Phase 5 — 情緒分析（1-2 天） ✅
 
 **目標**：加入散戶情緒（反向指標）+ 新聞情緒。
 
-- [ ] `src/sentiment/reddit.py`：抓 r/wallstreetbets、r/stocks 提及次數（PRAW）
-- [ ] `src/sentiment/stocktwits.py`：StockTwits API bullish/bearish 比
-- [ ] `src/sentiment/google_trends.py`：pytrends（注意 rate limit）
-- [ ] `src/sentiment/news_llm.py`：Claude API 對新聞 headline 情緒打分（-1 ~ +1）
-  - [ ] 用 Haiku 4.5 控成本
-  - [ ] batch 處理 + prompt caching
-- [ ] `src/scoring/sentiment_score.py`：整合 → Sentiment Score 0-100
-- [ ] 驗證：對熱門股跑 → 看到情緒分數
+- [x] `src/sentiment/news_llm.py`：Claude Haiku 4.5 對新聞 headline 情緒打分（-1 ~ +1）
+  - prompt caching 在 system rubric（節省 ~90% input tokens after warmup）
+  - structured outputs (`output_format=ScoresResponse` pydantic) 保證可解析
+  - batch 處理（1 API call per ~50 headlines）
+  - graceful skip 當 ANTHROPIC_API_KEY 為空
+- [x] `src/sentiment/stocktwits.py`：公開 API（無需 key）→ Bullish/Bearish 比例
+- [x] DB migration v4: `sentiment_daily` 表（per-symbol per-day）
+- [x] `src/scoring/sentiment_score.py`：news (-1..1) + stocktwits (0..1) → 0-100 weighted (news 0.6 + stocktwits 0.4)
+- [x] `src/sentiment/runner.py`：end-to-end pipeline
+- [x] engine_v2 加入 `sentiment` 訊號 (weight 0.12)；WEIGHTS rebalanced 含 sentiment
+- [x] daily_pipeline 加 `run_sentiment` flag；report 加 Sent 欄位
+- [x] `radar sentiment run` + `radar report run --sentiment` CLI
+- [x] tests：`test_sentiment.py` (6 tests)；總計 68/68 過
+- [ ] Reddit / Google Trends — 略過（需要 API key 設定，非 MVP critical；架構預留位置）
+- [x] 驗證：StockTwits live test → NVDA 83 / AAPL 73 / PLTR 86 sentiment scores
+- [x] **重要成果**：sentiment 接上後 recommendations 從 18 → **40 個**；BB/PN/GBTG 升級為 strong_long（5+ bullish signals）；NOK 也達到 5 bullish (smart_money + technical + options_skew + sentiment + 52w)
 
 ---
 

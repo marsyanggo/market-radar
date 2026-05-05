@@ -156,9 +156,10 @@ def report() -> None:
 @click.option("--watchlists", is_flag=True, help="Write proposed watchlists for AI_trader")
 @click.option("--options", is_flag=True, help="Also fetch options chain + UOA + flow metrics")
 @click.option("--options-top", default=20, help="Run options pipeline for top N symbols")
+@click.option("--sentiment", is_flag=True, help="Also run sentiment pipeline (news LLM + StockTwits)")
 def report_run(
     no_screener: bool, telegram: bool, watchlists: bool,
-    options: bool, options_top: int,
+    options: bool, options_top: int, sentiment: bool,
 ) -> None:
     """Run the full daily pipeline and write the markdown report."""
     from src.recommend.daily_pipeline import run_daily_pipeline
@@ -169,8 +170,42 @@ def report_run(
         write_watchlists_files=watchlists,
         run_options=options,
         options_top_n=options_top,
+        run_sentiment=sentiment,
     )
     click.echo(f"report done: {counts}")
+
+
+@cli.group()
+def sentiment() -> None:
+    """Sentiment commands."""
+
+
+@sentiment.command("run")
+@click.option("--symbol", multiple=True, help="Specific symbols (default: stocks table)")
+@click.option("--no-llm", is_flag=True, help="Skip Claude news scoring")
+@click.option("--no-stocktwits", is_flag=True, help="Skip StockTwits fetch")
+def sentiment_run(symbol: tuple[str, ...], no_llm: bool, no_stocktwits: bool) -> None:
+    """Score news with Claude + fetch StockTwits + write daily summary."""
+    from datetime import datetime, timedelta, timezone
+
+    from src.db.connection import get_conn
+    from src.db.repos import StocksRepo
+    from src.sentiment.runner import run_sentiment_pipeline
+
+    if symbol:
+        symbols = list(symbol)
+    else:
+        with get_conn() as conn:
+            symbols = [r["symbol"] for r in StocksRepo(conn).list_recent(limit=50)]
+
+    now = datetime.now(timezone.utc)
+    today = now.strftime("%Y-%m-%d")
+    window_start = (now - timedelta(hours=24)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    counts = run_sentiment_pipeline(
+        symbols=symbols, as_of=today, window_start_iso=window_start,
+        score_news=not no_llm, fetch_stocktwits=not no_stocktwits,
+    )
+    click.echo(f"sentiment done: {counts}")
 
 
 @cli.group()

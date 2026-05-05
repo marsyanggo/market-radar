@@ -65,6 +65,26 @@ MIGRATIONS: list[tuple[int, str]] = [
         CREATE INDEX IF NOT EXISTS idx_flow_as_of ON option_flow(as_of DESC);
         """,
     ),
+    (
+        4,
+        # Per-day sentiment summary (combined LLM news + StockTwits + others).
+        """
+        CREATE TABLE IF NOT EXISTS sentiment_daily (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            symbol TEXT NOT NULL,
+            as_of TEXT NOT NULL,
+            news_count INTEGER DEFAULT 0,
+            news_avg_sentiment REAL,
+            stocktwits_bullish INTEGER,
+            stocktwits_bearish INTEGER,
+            stocktwits_bullish_ratio REAL,
+            sentiment_score REAL,
+            created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+            UNIQUE(symbol, as_of)
+        );
+        CREATE INDEX IF NOT EXISTS idx_sent_as_of ON sentiment_daily(as_of DESC);
+        """,
+    ),
 ]
 
 

@@ -29,6 +29,7 @@ class SignalSnapshot:
     pct_from_high_52w: float | None = None
     put_call_ratio: float | None = None
     iv_skew_25d: float | None = None
+    sentiment_score: float | None = None
 
 
 # ---------- individual signal scorers ----------
@@ -102,6 +103,11 @@ def options_skew_signal(snap: SignalSnapshot) -> float | None:
     return clamp(linear(0.10 - snap.iv_skew_25d, 0.0, 0.15), 0, 100)
 
 
+def sentiment_signal(snap: SignalSnapshot) -> float | None:
+    """Combined news + StockTwits sentiment, already 0-100."""
+    return snap.sentiment_score
+
+
 def fifty_two_week_signal(snap: SignalSnapshot) -> float | None:
     """Distance from 52w high. Near high (>-5%) = strong, <-30% = weak."""
     if snap.pct_from_high_52w is None:
@@ -125,6 +131,7 @@ ALL_SCORERS: dict[str, callable] = {
     "rsi": rsi_signal,
     "volume": volume_confirmation_signal,
     "options_skew": options_skew_signal,
+    "sentiment": sentiment_signal,
     "fifty_two_week": fifty_two_week_signal,
 }
 

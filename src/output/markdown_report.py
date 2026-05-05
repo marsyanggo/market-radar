@@ -13,12 +13,15 @@ def render_report(as_of: str) -> str:
             """
             SELECT h.symbol, h.heat_score, h.volume_vs_adv, h.options_uoa_count, h.news_density,
                    t.close, t.rsi_14, t.sma_20, t.pct_from_high_52w,
-                   f.put_call_ratio, f.iv_skew_25d, f.smart_money_score, f.uoa_count
+                   f.put_call_ratio, f.iv_skew_25d, f.smart_money_score, f.uoa_count,
+                   s.sentiment_score AS sent
             FROM heat_scores h
             LEFT JOIN technical_indicators t
               ON t.symbol = h.symbol AND t.as_of = h.as_of
             LEFT JOIN option_flow f
               ON f.symbol = h.symbol AND f.as_of = h.as_of
+            LEFT JOIN sentiment_daily s
+              ON s.symbol = h.symbol AND s.as_of = h.as_of
             WHERE h.as_of = ?
             ORDER BY h.heat_score DESC
             LIMIT 10
@@ -53,8 +56,8 @@ def render_report(as_of: str) -> str:
     if not heat_rows:
         lines.append("_no heat data_\n")
     else:
-        lines.append("| # | Symbol | Heat | Vol×ADV | RSI | Close | UOA | P/C | SM |")
-        lines.append("|---|--------|------|---------|-----|-------|-----|-----|----|")
+        lines.append("| # | Symbol | Heat | Vol×ADV | RSI | Close | UOA | P/C | SM | Sent |")
+        lines.append("|---|--------|------|---------|-----|-------|-----|-----|----|------|")
         for i, r in enumerate(heat_rows, 1):
             vol = f"{r['volume_vs_adv']:.2f}×" if r["volume_vs_adv"] else "—"
             rsi = f"{r['rsi_14']:.0f}" if r["rsi_14"] else "—"
@@ -62,8 +65,9 @@ def render_report(as_of: str) -> str:
             uoa = str(r["uoa_count"]) if r["uoa_count"] else "—"
             pc = f"{r['put_call_ratio']:.2f}" if r["put_call_ratio"] else "—"
             sm = f"{r['smart_money_score']:.0f}" if r["smart_money_score"] is not None else "—"
+            sent = f"{r['sent']:.0f}" if r["sent"] is not None else "—"
             lines.append(
-                f"| {i} | **{r['symbol']}** | {r['heat_score']:.0f} | {vol} | {rsi} | {close} | {uoa} | {pc} | {sm} |"
+                f"| {i} | **{r['symbol']}** | {r['heat_score']:.0f} | {vol} | {rsi} | {close} | {uoa} | {pc} | {sm} | {sent} |"
             )
     lines.append("")
 

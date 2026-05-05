@@ -21,6 +21,7 @@ from src.db.repos import (
 from src.indicators.technical import compute_all
 from src.logger import logger
 from src.options.runner import run_options_pipeline
+from src.sentiment.runner import run_sentiment_pipeline
 from src.output.markdown_report import render_report, write_report
 from src.output.telegram import send_daily_summary
 from src.output.watchlist_writer import write_watchlists
@@ -40,6 +41,7 @@ def run_daily_pipeline(
     run_options: bool = False,
     options_top_n: int = 20,
     use_v2: bool = True,
+    run_sentiment: bool = False,
 ) -> dict:
     """Run the full daily pipeline. Returns counts + report path."""
     now = datetime.now(timezone.utc)
@@ -81,6 +83,18 @@ def run_daily_pipeline(
         options_summary = run_options_pipeline(
             opt_symbols, underlying_prices, today, window_start_iso
         )
+
+    # 3.6 Sentiment pipeline (LLM news scoring + StockTwits)
+    sentiment_summary = {}
+    if run_sentiment:
+        try:
+            sentiment_summary = run_sentiment_pipeline(
+                symbols=universe,
+                as_of=today,
+                window_start_iso=window_start_iso,
+            )
+        except Exception:
+            logger.exception("sentiment pipeline failed (non-fatal)")
 
     # 4. Compute & persist technicals + heat scores
     technicals_n = 0
@@ -136,6 +150,10 @@ def run_daily_pipeline(
                             "SELECT put_call_ratio, iv_skew_25d, smart_money_score FROM option_flow WHERE symbol=? AND as_of=?",
                             (sym, today),
                         ).fetchone()
+                        sent_row = conn.execute(
+                            "SELECT sentiment_score FROM sentiment_daily WHERE symbol=? AND as_of=?",
+                            (sym, today),
+                        ).fetchone()
                         sig_snap = SignalSnapshot(
                             heat_score=heat.heat_score,
                             smart_money_score=flow_row["smart_money_score"] if flow_row else None,
@@ -149,6 +167,7 @@ def run_daily_pipeline(
                             pct_from_high_52w=snap.pct_from_high_52w,
                             put_call_ratio=flow_row["put_call_ratio"] if flow_row else None,
                             iv_skew_25d=flow_row["iv_skew_25d"] if flow_row else None,
+                            sentiment_score=sent_row["sentiment_score"] if sent_row else None,
                         )
                         rec = classify_v2(symbol=sym, as_of=today, snap=sig_snap)
                         if rec.category in ("strong_long", "watch", "avoid"):
@@ -207,6 +226,7 @@ def run_daily_pipeline(
         "telegram": telegram_ok,
         **{k: v for k, v in watchlist_info.items() if k.endswith("_n")},
         **options_summary,
+        **{f"sentiment_{k}": v for k, v in sentiment_summary.items()},
     }
     logger.info(f"=== daily pipeline done: {counts} ===")
     return counts

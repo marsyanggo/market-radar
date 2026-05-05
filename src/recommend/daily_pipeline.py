@@ -20,7 +20,9 @@ from src.db.repos import (
 )
 from src.indicators.technical import compute_all
 from src.logger import logger
-from src.output.markdown_report import write_report
+from src.output.markdown_report import render_report, write_report
+from src.output.telegram import send_daily_summary
+from src.output.watchlist_writer import write_watchlists
 from src.recommend.engine_v1 import classify
 from src.scoring.heat import compute_heat
 
@@ -30,6 +32,8 @@ def run_daily_pipeline(
     most_actives_top: int = 50,
     movers_top: int = 25,
     batch_size: int = 50,
+    send_telegram: bool = False,
+    write_watchlists_files: bool = False,
 ) -> dict:
     """Run the full daily pipeline. Returns counts + report path."""
     now = datetime.now(timezone.utc)
@@ -126,6 +130,17 @@ def run_daily_pipeline(
     report_path: Path = write_report(today)
     logger.info(f"report written → {report_path}")
 
+    # 7. Watchlists for AI_trader
+    watchlist_info = {}
+    if write_watchlists_files:
+        watchlist_info = write_watchlists(today)
+
+    # 8. Telegram
+    telegram_ok = False
+    if send_telegram:
+        telegram_ok = send_daily_summary(render_report(today), today)
+        logger.info(f"telegram sent: {telegram_ok}")
+
     counts = {
         "as_of": today,
         "universe": len(universe),
@@ -133,6 +148,8 @@ def run_daily_pipeline(
         "heat_scores": heat_n,
         "recommendations": rec_n,
         "report_path": str(report_path),
+        "telegram": telegram_ok,
+        **{k: v for k, v in watchlist_info.items() if k.endswith("_n")},
     }
     logger.info(f"=== daily pipeline done: {counts} ===")
     return counts

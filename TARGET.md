@@ -174,18 +174,20 @@
 
 ---
 
-## Phase 7 — 自動化與輸出（1 天）
+## Phase 7 — 自動化與輸出（1 天） ✅
 
 **目標**：每日全自動產出 + 推送 Telegram + 整合 AI_trader。
 
-- [ ] `src/output/telegram.py`：複用 AI_trader 的 bot，發送格式化報告
-- [ ] `src/output/watchlist_writer.py`：
-  - [ ] IV Rank 低 + 未爆量 → `data/watchlist.json`
-  - [ ] RSI 超賣 + 大單買進 → `data/phase2_watchlist.json`
-- [ ] `scripts/run_daily.sh`：整合所有 step（screener → indicators → score → recommend → output）
-- [ ] LaunchAgent plist：`com.marsyang.market_radar.plist`（每日 08:00 ET）
-- [ ] `scripts/install_launchd.sh`：安裝/卸載 LaunchAgent
-- [ ] 驗證：手動觸發 LaunchAgent → 收到 Telegram 報告
+- [x] `src/output/telegram.py`：httpx-based bot wrapper（共用 AI_trader 的 token），auto-split 4096 char limit
+- [x] `src/output/watchlist_writer.py`：寫到 `data/proposed_watchlist.json` + `data/proposed_phase2_watchlist.json`
+  - 預設 heuristic（待 Phase 4 IV Rank 接好後升級）：IC = RSI 接近 50 + 流動性 OK；Phase2 = RSI < 35
+  - 故意寫到「proposed」前綴 — 不直接覆蓋 AI_trader hand-curated watchlists，需手動 promote
+- [x] `daily_pipeline.run_daily_pipeline()` 加 `send_telegram` + `write_watchlists_files` flags
+- [x] `radar telegram test` + `radar report run --telegram --watchlists` CLI
+- [x] `scripts/run_daily.sh`：screener → news → poll trades (1 cycle) → report (with telegram + watchlists)
+- [x] `com.marsyang.market_radar.daily.plist`：StartCalendarInterval 06:30 Mac-local
+- [x] `scripts/install_launchd.sh`：install / uninstall / status / trigger sub-commands
+- [x] 驗證：`bash scripts/run_daily.sh` 完整跑通，universe=93、ic=18、phase2=6、telegram OK
 
 ---
 

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.marsyang.market_radar.daily</string>
+
+    <!-- Run the full daily pipeline.
+         Times are in MAC LOCAL time. Adjust StartCalendarInterval below.
+         Default: 06:30 local (= 09:30 ET in PT during DST, just after market open).
+    -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/marsyang/workspace/market_radar/scripts/run_daily.sh</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/marsyang/workspace/market_radar</string>
+
+    <!-- Don't run at load — only on schedule. -->
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>6</integer>
+        <key>Minute</key>
+        <integer>30</integer>
+    </dict>
+
+    <!-- Logs go alongside Market Radar's own logs. -->
+    <key>StandardOutPath</key>
+    <string>/Users/marsyang/workspace/market_radar/logs/launchd_stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/marsyang/workspace/market_radar/logs/launchd_stderr.log</string>
+</dict>
+</plist>

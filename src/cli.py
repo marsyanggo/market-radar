@@ -152,12 +152,32 @@ def report() -> None:
 
 @report.command("run")
 @click.option("--no-screener", is_flag=True, help="Skip screener refresh, reuse stocks table")
-def report_run(no_screener: bool) -> None:
+@click.option("--telegram", is_flag=True, help="Also send report to Telegram")
+@click.option("--watchlists", is_flag=True, help="Write proposed watchlists for AI_trader")
+def report_run(no_screener: bool, telegram: bool, watchlists: bool) -> None:
     """Run the full daily pipeline and write the markdown report."""
     from src.recommend.daily_pipeline import run_daily_pipeline
 
-    counts = run_daily_pipeline(refresh_universe=not no_screener)
+    counts = run_daily_pipeline(
+        refresh_universe=not no_screener,
+        send_telegram=telegram,
+        write_watchlists_files=watchlists,
+    )
     click.echo(f"report done: {counts}")
+
+
+@cli.group()
+def telegram() -> None:
+    """Telegram commands."""
+
+
+@telegram.command("test")
+def telegram_test() -> None:
+    """Send a test message to verify bot config."""
+    from src.output.telegram import send_message
+
+    ok = send_message("📡 Market Radar — telegram test ✅")
+    click.echo(f"telegram test: {'OK' if ok else 'FAILED'}")
 
 
 if __name__ == "__main__":

@@ -35,6 +35,10 @@ sentiment = [
     "praw>=7.7.1",
     "pytrends>=4.9.2",
 ]
+dashboard = [
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.27.0",
+]
 
 [project.scripts]
 radar = "src.cli:cli"

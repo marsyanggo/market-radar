@@ -208,28 +208,44 @@
 
 ---
 
-## Phase 8 — 進階聰明錢追蹤（選配，2-3 天）
+## Phase 8 — 進階聰明錢追蹤（選配，2-3 天） ✅
 
 **目標**：機構與內部人動態。
 
-- [ ] `src/edgar/client.py`：SEC EDGAR API 包裝
-- [ ] `src/edgar/form_13f.py`：每季抓 13F → 偵測新進/出清部位
-- [ ] `src/edgar/form_4.py`：每日抓內部人交易（買賣金額、職位）
-- [ ] `src/scoring/institutional.py`：整合進 Smart Money Score
-- [ ] （選配付費）`src/polygon/dark_pool.py`：DP 比例
+- [x] `src/edgar/client.py`：SEC EDGAR API（公開 free，無需 key）+ User-Agent + 8 RPS throttle + ticker→CIK 對照（10359 mappings cached）+ filing index 解析
+- [x] `src/edgar/form_4.py`：抓 + 解析 Form 4 XML（nonDerivativeTransaction），含 transactionCoding、acquired/disposed sign、insider role
+- [x] DB migration v5: `insider_trades` 表（accession + transaction unique key 去重）
+- [x] `src/scoring/institutional.py`：`insider_score()` (買進 weight 2× 反映 P 是強訊號)
+- [x] engine_v2 加入 `insider` signal (weight 0.10)；WEIGHTS 重新平衡
+- [x] daily_pipeline 加 `run_insider` flag（top-N by volume，bound API cost）
+- [x] `radar edgar form4 --symbol X` + `radar report run --insider` CLI
+- [x] 驗證：NVDA / PLTR / AAPL 過去 60 天 84 trades 寫入 → NVDA $163M / PLTR $4.7M / AAPL $25M 賣股 (insider score 0 = 全 bearish — 真實情況因 RSU vesting 與 10b5-1 plans)
+- [ ] Form 13F（每季 / 45-day delay）— 略過：低時效性，等需要再做
+- [ ] Polygon.io Dark Pool — 略過：付費
 
 ---
 
-## Phase 9 — Web Dashboard（選配，3-5 天）
+## Phase 9 — Web Dashboard（選配，3-5 天） ✅
 
 **目標**：視覺化即時資訊。
 
-- [ ] `dashboard/api/`：FastAPI（routes：/heat、/smart_money、/recommendations、/stock/{symbol}）
-- [ ] `dashboard/web/`：React + Vite + TailwindCSS
-- [ ] 即時熱度榜（WebSocket push）
-- [ ] 聰明錢流向圖（chart.js）
-- [ ] 個股詳細頁（K 線 + 指標 + UOA 列表）
-- [ ] 部署：本機 docker-compose 起 nginx + api + web
+- [x] `dashboard/api/app.py`：FastAPI 5 個 endpoints
+  - `/api/health` — schema version + universe size
+  - `/api/heat?limit=N` — top N heat scores（含 vol×ADV/RSI/UOA/PC/SM/Sent）
+  - `/api/recommendations` — strong_long / watch / avoid 分類
+  - `/api/smart_money` — top SM scores（IV skew + UOA + P/C）
+  - `/api/stock/{symbol}` — 完整個股 detail（heat/tech/options_flow/sentiment/news/blocks/UOA/insider）
+- [x] `dashboard/web/index.html`：單頁 vanilla JS + Tailwind via CDN（**無 build step**）
+  - dark theme，3 sections (Heat / SM / Recs)
+  - 點 row → expand stock detail panel（4 metric cards + news/UOA/insider 列表）
+  - 搜尋框直接查股票
+- [x] 用 FastAPI StaticFiles 直接 serve 前端，單 port 8765
+- [x] `pyproject.toml` `[dashboard]` extra (fastapi + uvicorn)
+- [x] `radar dashboard --port 8765 --reload` CLI command
+- [x] 驗證：所有 5 endpoints live OK，NVDA detail 抓到 20 insider + 20 UOA + 12 news + 1 block
+- [ ] React + Vite — 略過（vanilla 已夠用，避免 build step 複雜度）
+- [ ] WebSocket push — 略過（每 30s 手動 refresh 已夠用）
+- [ ] docker-compose 部署 — 略過（本機已能跑）
 
 ---
 

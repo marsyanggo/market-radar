@@ -20,7 +20,9 @@ from src.db.repos import (
 )
 from src.indicators.technical import compute_all
 from src.logger import logger
+from src.edgar import form_4 as edgar_form4
 from src.options.runner import run_options_pipeline
+from src.scoring.institutional import insider_score
 from src.sentiment.runner import run_sentiment_pipeline
 from src.output.markdown_report import render_report, write_report
 from src.output.telegram import send_daily_summary
@@ -42,6 +44,9 @@ def run_daily_pipeline(
     options_top_n: int = 20,
     use_v2: bool = True,
     run_sentiment: bool = False,
+    run_insider: bool = False,
+    insider_top_n: int = 30,
+    insider_days_back: int = 30,
 ) -> dict:
     """Run the full daily pipeline. Returns counts + report path."""
     now = datetime.now(timezone.utc)
@@ -83,6 +88,21 @@ def run_daily_pipeline(
         options_summary = run_options_pipeline(
             opt_symbols, underlying_prices, today, window_start_iso
         )
+
+    # 3.55 Insider pipeline (SEC EDGAR Form 4)
+    insider_summary = {}
+    if run_insider:
+        try:
+            ranked = sorted(
+                ((sym, df["volume"].iloc[-1]) for sym, df in bars_by_symbol.items() if not df.empty),
+                key=lambda x: -x[1],
+            )
+            insider_symbols = [s for s, _ in ranked[:insider_top_n]]
+            insider_summary = edgar_form4.fetch_and_persist(
+                insider_symbols, days_back=insider_days_back
+            )
+        except Exception:
+            logger.exception("insider pipeline failed (non-fatal)")
 
     # 3.6 Sentiment pipeline (LLM news scoring + StockTwits)
     sentiment_summary = {}
@@ -154,6 +174,7 @@ def run_daily_pipeline(
                             "SELECT sentiment_score FROM sentiment_daily WHERE symbol=? AND as_of=?",
                             (sym, today),
                         ).fetchone()
+                        ins_score = insider_score(sym, since_iso_date=window_start_iso[:10])
                         sig_snap = SignalSnapshot(
                             heat_score=heat.heat_score,
                             smart_money_score=flow_row["smart_money_score"] if flow_row else None,
@@ -168,6 +189,7 @@ def run_daily_pipeline(
                             put_call_ratio=flow_row["put_call_ratio"] if flow_row else None,
                             iv_skew_25d=flow_row["iv_skew_25d"] if flow_row else None,
                             sentiment_score=sent_row["sentiment_score"] if sent_row else None,
+                            insider_score=ins_score,
                         )
                         rec = classify_v2(symbol=sym, as_of=today, snap=sig_snap)
                         if rec.category in ("strong_long", "watch", "avoid"):
@@ -227,6 +249,7 @@ def run_daily_pipeline(
         **{k: v for k, v in watchlist_info.items() if k.endswith("_n")},
         **options_summary,
         **{f"sentiment_{k}": v for k, v in sentiment_summary.items()},
+        **{f"insider_{k}": v for k, v in insider_summary.items()},
     }
     logger.info(f"=== daily pipeline done: {counts} ===")
     return counts

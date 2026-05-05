@@ -85,6 +85,33 @@ MIGRATIONS: list[tuple[int, str]] = [
         CREATE INDEX IF NOT EXISTS idx_sent_as_of ON sentiment_daily(as_of DESC);
         """,
     ),
+    (
+        5,
+        # SEC EDGAR Form 4 — insider transactions (officers, directors, 10%+ owners).
+        # Transaction codes: P=open-market purchase, S=open-market sale,
+        # A=grant/award, M=option exercise, F=tax withholding, etc.
+        """
+        CREATE TABLE IF NOT EXISTS insider_trades (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            symbol TEXT NOT NULL,
+            cik INTEGER NOT NULL,
+            accession TEXT NOT NULL,
+            insider_name TEXT,
+            insider_role TEXT,
+            transaction_code TEXT,
+            transaction_date TEXT NOT NULL,
+            shares REAL NOT NULL,
+            price_per_share REAL,
+            total_value REAL,
+            shares_owned_after REAL,
+            filing_date TEXT NOT NULL,
+            ingested_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+            UNIQUE(accession, transaction_code, transaction_date, shares, price_per_share, insider_name)
+        );
+        CREATE INDEX IF NOT EXISTS idx_insider_symbol_date ON insider_trades(symbol, transaction_date DESC);
+        CREATE INDEX IF NOT EXISTS idx_insider_filing_date ON insider_trades(filing_date DESC);
+        """,
+    ),
 ]
 
 

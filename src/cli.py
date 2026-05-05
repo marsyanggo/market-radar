@@ -157,9 +157,12 @@ def report() -> None:
 @click.option("--options", is_flag=True, help="Also fetch options chain + UOA + flow metrics")
 @click.option("--options-top", default=20, help="Run options pipeline for top N symbols")
 @click.option("--sentiment", is_flag=True, help="Also run sentiment pipeline (news LLM + StockTwits)")
+@click.option("--insider", is_flag=True, help="Also pull SEC EDGAR Form 4 insider trades")
+@click.option("--insider-top", default=30, help="Run insider pipeline for top N symbols")
 def report_run(
     no_screener: bool, telegram: bool, watchlists: bool,
     options: bool, options_top: int, sentiment: bool,
+    insider: bool, insider_top: int,
 ) -> None:
     """Run the full daily pipeline and write the markdown report."""
     from src.recommend.daily_pipeline import run_daily_pipeline
@@ -171,8 +174,41 @@ def report_run(
         run_options=options,
         options_top_n=options_top,
         run_sentiment=sentiment,
+        run_insider=insider,
+        insider_top_n=insider_top,
     )
     click.echo(f"report done: {counts}")
+
+
+@cli.command("dashboard")
+@click.option("--host", default="127.0.0.1", help="Bind host")
+@click.option("--port", default=8765, help="Port (default 8765)")
+@click.option("--reload", is_flag=True, help="Auto-reload on file change")
+def dashboard(host: str, port: int, reload: bool) -> None:
+    """Run the FastAPI web dashboard at http://localhost:8765"""
+    import uvicorn
+
+    uvicorn.run(
+        "dashboard.api.app:app",
+        host=host, port=port, reload=reload,
+        log_level="info",
+    )
+
+
+@cli.group()
+def edgar() -> None:
+    """SEC EDGAR commands."""
+
+
+@edgar.command("form4")
+@click.option("--symbol", multiple=True, required=True, help="Tickers to fetch Form 4 for")
+@click.option("--days", default=30, help="Look back N days")
+def edgar_form4_cmd(symbol: tuple[str, ...], days: int) -> None:
+    """Fetch + parse + persist Form 4 insider trades."""
+    from src.edgar.form_4 import fetch_and_persist
+
+    counts = fetch_and_persist(list(symbol), days_back=days)
+    click.echo(f"form4 done: {counts}")
 
 
 @cli.group()

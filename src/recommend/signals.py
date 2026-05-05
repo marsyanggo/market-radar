@@ -30,6 +30,7 @@ class SignalSnapshot:
     put_call_ratio: float | None = None
     iv_skew_25d: float | None = None
     sentiment_score: float | None = None
+    insider_score: float | None = None
 
 
 # ---------- individual signal scorers ----------
@@ -108,6 +109,11 @@ def sentiment_signal(snap: SignalSnapshot) -> float | None:
     return snap.sentiment_score
 
 
+def insider_signal(snap: SignalSnapshot) -> float | None:
+    """Insider Form-4 net activity, already 0-100."""
+    return snap.insider_score
+
+
 def fifty_two_week_signal(snap: SignalSnapshot) -> float | None:
     """Distance from 52w high. Near high (>-5%) = strong, <-30% = weak."""
     if snap.pct_from_high_52w is None:
@@ -132,6 +138,7 @@ ALL_SCORERS: dict[str, callable] = {
     "volume": volume_confirmation_signal,
     "options_skew": options_skew_signal,
     "sentiment": sentiment_signal,
+    "insider": insider_signal,
     "fifty_two_week": fifty_two_week_signal,
 }
 

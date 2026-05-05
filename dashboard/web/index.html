@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Market Radar</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+    .heat-bar { height: 6px; background: linear-gradient(90deg,#10b981 0%,#fbbf24 50%,#ef4444 100%); border-radius: 9999px; }
+    .pill { padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 600; }
+    table.dense td, table.dense th { padding: 6px 10px; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+
+<header class="border-b border-slate-800 px-6 py-4 flex items-center justify-between">
+  <div>
+    <h1 class="text-xl font-bold">📡 Market Radar</h1>
+    <p class="text-xs text-slate-400" id="header-meta">loading…</p>
+  </div>
+  <div class="flex gap-2">
+    <input id="symbol-search" placeholder="ticker"
+           class="bg-slate-800 px-3 py-1 rounded text-sm w-32 placeholder-slate-500">
+    <button id="search-btn" class="bg-emerald-600 hover:bg-emerald-500 px-3 py-1 rounded text-sm">View</button>
+    <button id="refresh-btn" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-sm">Refresh</button>
+  </div>
+</header>
+
+<main class="p-6 max-w-screen-2xl mx-auto grid gap-6 lg:grid-cols-3">
+  <!-- Top heat -->
+  <section class="lg:col-span-2 bg-slate-900 rounded-xl p-4 border border-slate-800">
+    <h2 class="text-base font-semibold mb-3">🔥 Top Heat Today</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm dense" id="heat-table">
+        <thead class="text-slate-400 border-b border-slate-800">
+          <tr><th class="text-left">#</th><th class="text-left">Symbol</th><th>Heat</th>
+              <th>Vol×ADV</th><th>RSI</th><th>Close</th><th>UOA</th>
+              <th>P/C</th><th>SM</th><th>Sent</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Smart money -->
+  <section class="bg-slate-900 rounded-xl p-4 border border-slate-800">
+    <h2 class="text-base font-semibold mb-3">💰 Smart Money</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm dense" id="sm-table">
+        <thead class="text-slate-400 border-b border-slate-800">
+          <tr><th class="text-left">Symbol</th><th>SM</th><th>UOA</th><th>P/C</th><th>Skew</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Recommendations -->
+  <section class="lg:col-span-3 bg-slate-900 rounded-xl p-4 border border-slate-800">
+    <h2 class="text-base font-semibold mb-3">🎯 Recommendations</h2>
+    <div class="grid md:grid-cols-3 gap-4" id="rec-cards"></div>
+  </section>
+
+  <!-- Stock detail -->
+  <section class="lg:col-span-3 bg-slate-900 rounded-xl p-4 border border-slate-800 hidden" id="detail-panel">
+    <h2 class="text-base font-semibold mb-3" id="detail-title"></h2>
+    <div id="detail-body"></div>
+  </section>
+</main>
+
+<script>
+const API = '';
+
+const heatColor = (h) => h >= 70 ? 'text-red-400' : h >= 50 ? 'text-amber-400' : h >= 30 ? 'text-emerald-400' : 'text-slate-300';
+const fmt = (n, d=2) => (n === null || n === undefined) ? '—' : Number(n).toFixed(d);
+const fmt0 = (n) => fmt(n, 0);
+
+async function loadHealth() {
+  const r = await fetch(API + '/api/health').then(r => r.json());
+  document.getElementById('header-meta').textContent =
+    `schema v${r.schema_version} · ${r.n_stocks} symbols tracked`;
+}
+
+async function loadHeat() {
+  const r = await fetch(API + '/api/heat?limit=15').then(r => r.json());
+  const tbody = document.querySelector('#heat-table tbody');
+  tbody.innerHTML = r.rows.map((row, i) => `
+    <tr class="border-b border-slate-800 hover:bg-slate-800/50 cursor-pointer" data-symbol="${row.symbol}">
+      <td class="text-slate-500">${i+1}</td>
+      <td class="font-bold">${row.symbol}</td>
+      <td class="text-center ${heatColor(row.heat_score)}">${fmt0(row.heat_score)}</td>
+      <td class="text-center">${row.volume_vs_adv ? fmt(row.volume_vs_adv,1)+'×' : '—'}</td>
+      <td class="text-center">${fmt0(row.rsi_14)}</td>
+      <td class="text-center">$${fmt(row.close)}</td>
+      <td class="text-center">${row.uoa_count ?? '—'}</td>
+      <td class="text-center">${fmt(row.put_call_ratio)}</td>
+      <td class="text-center">${fmt0(row.smart_money_score)}</td>
+      <td class="text-center">${fmt0(row.sentiment_score)}</td>
+    </tr>`).join('');
+  tbody.querySelectorAll('tr').forEach(tr => {
+    tr.addEventListener('click', () => loadStock(tr.dataset.symbol));
+  });
+}
+
+async function loadSmartMoney() {
+  const r = await fetch(API + '/api/smart_money').then(r => r.json());
+  const tbody = document.querySelector('#sm-table tbody');
+  tbody.innerHTML = r.rows.map(row => `
+    <tr class="border-b border-slate-800 hover:bg-slate-800/50 cursor-pointer" data-symbol="${row.symbol}">
+      <td class="font-bold">${row.symbol}</td>
+      <td class="text-center">${fmt0(row.smart_money_score)}</td>
+      <td class="text-center">${row.uoa_count}</td>
+      <td class="text-center">${fmt(row.put_call_ratio)}</td>
+      <td class="text-center ${row.iv_skew_25d < 0 ? 'text-emerald-400' : 'text-red-400'}">${row.iv_skew_25d !== null ? (row.iv_skew_25d>=0?'+':'')+fmt(row.iv_skew_25d, 3) : '—'}</td>
+    </tr>`).join('');
+  tbody.querySelectorAll('tr').forEach(tr => {
+    tr.addEventListener('click', () => loadStock(tr.dataset.symbol));
+  });
+}
+
+const catBadge = (cat) => ({
+  strong_long: 'bg-emerald-500/20 text-emerald-300',
+  watch:       'bg-amber-500/20 text-amber-300',
+  avoid:       'bg-red-500/20 text-red-300',
+}[cat] || 'bg-slate-700');
+
+async function loadRecs() {
+  const r = await fetch(API + '/api/recommendations').then(r => r.json());
+  const cats = { strong_long: [], watch: [], avoid: [] };
+  r.rows.forEach(x => cats[x.category]?.push(x));
+
+  const cardsEl = document.getElementById('rec-cards');
+  cardsEl.innerHTML = ['strong_long', 'watch', 'avoid'].map(cat => {
+    const items = cats[cat];
+    if (!items?.length) return '';
+    const label = { strong_long: '✅ Strong Long', watch: '📊 Watch', avoid: '❌ Avoid' }[cat];
+    return `
+      <div>
+        <h3 class="text-sm font-semibold mb-2 ${catBadge(cat)} px-2 py-1 rounded inline-block">${label} (${items.length})</h3>
+        <ul class="space-y-1 text-sm">
+          ${items.slice(0, 12).map(x => `
+            <li class="flex justify-between hover:bg-slate-800/50 px-2 py-1 rounded cursor-pointer" data-symbol="${x.symbol}">
+              <span class="font-bold">${x.symbol}</span>
+              <span class="text-slate-400">heat ${fmt0(x.heat_score)} · @ $${fmt(x.entry_price)}</span>
+            </li>`).join('')}
+        </ul>
+      </div>`;
+  }).join('');
+  cardsEl.querySelectorAll('li').forEach(li => {
+    li.addEventListener('click', () => loadStock(li.dataset.symbol));
+  });
+}
+
+async function loadStock(symbol) {
+  const r = await fetch(API + '/api/stock/' + symbol).then(r => r.ok ? r.json() : null);
+  if (!r) return;
+  const panel = document.getElementById('detail-panel');
+  document.getElementById('detail-title').textContent = `🔍 ${r.symbol}`;
+  const t = r.technical || {};
+  const h = r.heat || {};
+  const f = r.option_flow || {};
+  const s = r.sentiment || {};
+
+  document.getElementById('detail-body').innerHTML = `
+    <div class="grid md:grid-cols-4 gap-3 text-sm mb-4">
+      <div class="bg-slate-800 p-3 rounded">
+        <div class="text-slate-400 text-xs">Heat / SM</div>
+        <div class="text-2xl font-bold ${heatColor(h.heat_score)}">${fmt0(h.heat_score)}</div>
+        <div class="text-xs text-slate-400">SM ${fmt0(f.smart_money_score)} · Sent ${fmt0(s.sentiment_score)}</div>
+      </div>
+      <div class="bg-slate-800 p-3 rounded">
+        <div class="text-slate-400 text-xs">Close · RSI</div>
+        <div class="text-2xl font-bold">$${fmt(t.close)}</div>
+        <div class="text-xs text-slate-400">RSI ${fmt0(t.rsi_14)} · ATR ${fmt(t.atr_14)}</div>
+      </div>
+      <div class="bg-slate-800 p-3 rounded">
+        <div class="text-slate-400 text-xs">Options Flow</div>
+        <div>P/C ${fmt(f.put_call_ratio)} · UOA ${f.uoa_count ?? 0}</div>
+        <div class="text-xs ${f.iv_skew_25d < 0 ? 'text-emerald-400' : 'text-red-400'}">IV skew ${f.iv_skew_25d !== undefined ? (f.iv_skew_25d>=0?'+':'')+fmt(f.iv_skew_25d, 3) : '—'}</div>
+      </div>
+      <div class="bg-slate-800 p-3 rounded">
+        <div class="text-slate-400 text-xs">52w / MA</div>
+        <div>${fmt(t.pct_from_high_52w, 1)}% from high</div>
+        <div class="text-xs text-slate-400">SMA20 $${fmt(t.sma_20)} · 50 $${fmt(t.sma_50)}</div>
+      </div>
+    </div>
+    <div class="grid md:grid-cols-2 gap-4">
+      <div>
+        <h4 class="font-semibold mb-2">📰 Recent News</h4>
+        <ul class="space-y-1 text-xs">${r.recent_news.map(n => `
+          <li class="border-b border-slate-800 py-1">
+            <a href="${n.url}" target="_blank" class="hover:underline">${n.headline}</a>
+            <div class="text-slate-500">${n.source} · ${n.ts}${n.sentiment_score!==null ? ' · sent '+fmt(n.sentiment_score,2):''}</div>
+          </li>`).join('') || '<li class="text-slate-500">none</li>'}
+        </ul>
+      </div>
+      <div>
+        <h4 class="font-semibold mb-2">⚡ UOA</h4>
+        <ul class="space-y-1 text-xs">${r.recent_uoa.map(u => `
+          <li class="border-b border-slate-800 py-1">
+            <span class="${u.option_type==='call'?'text-emerald-400':'text-red-400'} font-bold">${u.option_type.toUpperCase()}</span>
+            $${u.strike} ${u.expiration} · ${u.size} contracts @ $${fmt(u.price)} · OTM ${fmt(u.otm_pct,1)}%
+          </li>`).join('') || '<li class="text-slate-500">none</li>'}
+        </ul>
+      </div>
+      <div class="md:col-span-2">
+        <h4 class="font-semibold mb-2">🏛️ Insider Trades</h4>
+        <ul class="space-y-1 text-xs">${r.recent_insider.slice(0,8).map(i => `
+          <li class="border-b border-slate-800 py-1">
+            <span class="${i.transaction_code==='P'?'text-emerald-400':i.transaction_code==='S'?'text-red-400':'text-slate-400'} font-bold">${i.transaction_code}</span>
+            ${i.shares > 0 ? '+' : ''}${fmt0(i.shares)} sh @ $${fmt(i.price_per_share)} · ${i.transaction_date}
+            <span class="text-slate-500"> · ${i.insider_name} (${i.insider_role || ''})</span>
+          </li>`).join('') || '<li class="text-slate-500">none</li>'}
+        </ul>
+      </div>
+    </div>`;
+  panel.classList.remove('hidden');
+  panel.scrollIntoView({ behavior: 'smooth' });
+}
+
+document.getElementById('search-btn').addEventListener('click', () => {
+  const sym = document.getElementById('symbol-search').value.trim().toUpperCase();
+  if (sym) loadStock(sym);
+});
+document.getElementById('symbol-search').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('search-btn').click();
+});
+document.getElementById('refresh-btn').addEventListener('click', () => {
+  loadHealth(); loadHeat(); loadSmartMoney(); loadRecs();
+});
+
+loadHealth(); loadHeat(); loadSmartMoney(); loadRecs();
+</script>
+</body>
+</html>

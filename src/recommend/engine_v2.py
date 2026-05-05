@@ -25,14 +25,15 @@ from src.recommend.signals import (
 )
 
 WEIGHTS: dict[str, float] = {
-    "heat": 0.18,
-    "smart_money": 0.18,
-    "technical_alignment": 0.13,
-    "rsi": 0.08,
-    "volume": 0.08,
+    "heat": 0.16,
+    "smart_money": 0.16,
+    "technical_alignment": 0.12,
+    "rsi": 0.07,
+    "volume": 0.07,
     "options_skew": 0.10,
-    "sentiment": 0.12,
-    "fifty_two_week": 0.13,
+    "sentiment": 0.11,
+    "insider": 0.10,
+    "fifty_two_week": 0.11,
 }
 
 

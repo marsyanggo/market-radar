@@ -65,5 +65,20 @@ def indicators_run(symbol: tuple[str, ...]) -> None:
     click.echo(f"indicators done: {counts}")
 
 
+@cli.group()
+def report() -> None:
+    """Daily report commands."""
+
+
+@report.command("run")
+@click.option("--no-screener", is_flag=True, help="Skip screener refresh, reuse stocks table")
+def report_run(no_screener: bool) -> None:
+    """Run the full daily pipeline and write the markdown report."""
+    from src.recommend.daily_pipeline import run_daily_pipeline
+
+    counts = run_daily_pipeline(refresh_universe=not no_screener)
+    click.echo(f"report done: {counts}")
+
+
 if __name__ == "__main__":
     cli()

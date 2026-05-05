@@ -90,25 +90,19 @@
 
 ---
 
-## Phase 3 — Heat Score 與初版推薦（1 天）⭐ MVP 里程碑
+## Phase 3 — Heat Score 與初版推薦（1 天）⭐ MVP 里程碑 ✅
 
 **目標**：用 Phase 1+2 的資料算 Heat Score，產出第一份推薦報告（不含 options）。
 
-- [ ] `src/scoring/heat.py`：實作 Heat 公式
-  ```
-  Heat = 0.30 × volume_vs_adv
-       + 0.25 × large_block_pct
-       + 0.25 × options_uoa_count   # Phase 3.5 前先設 0
-       + 0.20 × news_density
-  ```
-- [ ] `src/scoring/normalize.py`：把各指標歸一化到 0-100
-- [ ] `src/recommend/engine_v1.py`：簡單版規則引擎
-  - [ ] Heat > 70 + RSI < 70 → Watch
-  - [ ] Heat > 80 + RSI < 70 + 突破 20MA → Strong Long
-  - [ ] Heat > 90 + RSI > 80 → Avoid
-- [ ] `src/output/markdown_report.py`：產生 `reports/YYYY-MM-DD.md`
-- [ ] `scripts/daily_report.py`：08:00 ET 跑一次，整合所有 step
-- [ ] 驗證：手動跑 → 看到 Top 10 + 推薦清單
+- [x] `src/scoring/normalize.py`：linear/clamp 工具 + 4 個 norm_*  函式（0-100）
+- [x] `src/scoring/heat.py`：Heat 公式 + `compute_heat()` + `volume_vs_adv_from_bars()`
+- [x] `src/recommend/engine_v1.py`：3 規則 (avoid > 90+RSI>80, strong_long > 80+RSI<70+>SMA20, watch > 70)
+- [x] `src/output/markdown_report.py`：render + write to `reports/YYYY-MM-DD.md`
+- [x] `src/recommend/daily_pipeline.py`：orchestrator (screener→bars→technicals+heat→classify→report)
+- [x] `scripts/daily_report.py` + `radar report run` CLI
+- [x] tests：`test_scoring.py` (7) + `test_engine_v1.py` (6)；總計 27/27 過
+- [x] 驗證：`radar report run --no-screener` → reports/2026-05-05.md，38 universe / 37 technicals / 38 heats
+- [x] **MVP 觀察**：所有 heat 目前都 = 30（只有 volume weight 0.30 啟用）；recommendations 空白屬預期 — 待 Phase 1.3 (news) + 1.4 (block) + 4 (UOA) 接上後 heat 才會真正分散
 
 ---
 

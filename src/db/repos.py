@@ -334,6 +334,98 @@ class HeatScoresRepo:
 
 
 # ============================================================
+# option_snapshots
+# ============================================================
+class OptionSnapshotsRepo:
+    def __init__(self, conn: sqlite3.Connection) -> None:
+        self.conn = conn
+
+    def upsert_many(self, rows: list[dict]) -> int:
+        if not rows:
+            return 0
+        self.conn.executemany(
+            """
+            INSERT INTO option_snapshots
+              (symbol, contract_symbol, option_type, strike, expiration,
+               iv, delta, gamma, theta, vega, rho, bid, ask, last_price, last_size,
+               otm_pct, ts, as_of)
+            VALUES
+              (:symbol, :contract_symbol, :option_type, :strike, :expiration,
+               :iv, :delta, :gamma, :theta, :vega, :rho, :bid, :ask, :last_price, :last_size,
+               :otm_pct, :ts, :as_of)
+            ON CONFLICT(contract_symbol, as_of) DO UPDATE SET
+              iv=excluded.iv,
+              delta=excluded.delta,
+              gamma=excluded.gamma,
+              theta=excluded.theta,
+              vega=excluded.vega,
+              rho=excluded.rho,
+              bid=excluded.bid,
+              ask=excluded.ask,
+              last_price=excluded.last_price,
+              last_size=excluded.last_size,
+              otm_pct=excluded.otm_pct,
+              ts=excluded.ts
+            """,
+            rows,
+        )
+        return len(rows)
+
+    def list_for_symbol(self, symbol: str, as_of: str) -> list[dict[str, Any]]:
+        rows = self.conn.execute(
+            "SELECT * FROM option_snapshots WHERE symbol=? AND as_of=?",
+            (symbol, as_of),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+# ============================================================
+# option_flow
+# ============================================================
+class OptionFlowRepo:
+    def __init__(self, conn: sqlite3.Connection) -> None:
+        self.conn = conn
+
+    def upsert(
+        self,
+        symbol: str,
+        as_of: str,
+        call_count: int = 0,
+        put_count: int = 0,
+        put_call_ratio: float | None = None,
+        iv_skew_25d: float | None = None,
+        uoa_count: int = 0,
+        smart_money_score: float | None = None,
+    ) -> None:
+        self.conn.execute(
+            """
+            INSERT INTO option_flow
+              (symbol, as_of, call_count, put_count, put_call_ratio,
+               iv_skew_25d, uoa_count, smart_money_score)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(symbol, as_of) DO UPDATE SET
+              call_count=excluded.call_count,
+              put_count=excluded.put_count,
+              put_call_ratio=excluded.put_call_ratio,
+              iv_skew_25d=excluded.iv_skew_25d,
+              uoa_count=excluded.uoa_count,
+              smart_money_score=excluded.smart_money_score
+            """,
+            (
+                symbol, as_of, call_count, put_count, put_call_ratio,
+                iv_skew_25d, uoa_count, smart_money_score,
+            ),
+        )
+
+    def get(self, symbol: str, as_of: str) -> dict[str, Any] | None:
+        row = self.conn.execute(
+            "SELECT * FROM option_flow WHERE symbol=? AND as_of=?",
+            (symbol, as_of),
+        ).fetchone()
+        return dict(row) if row else None
+
+
+# ============================================================
 # recommendations
 # ============================================================
 class RecommendationsRepo:

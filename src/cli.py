@@ -154,7 +154,12 @@ def report() -> None:
 @click.option("--no-screener", is_flag=True, help="Skip screener refresh, reuse stocks table")
 @click.option("--telegram", is_flag=True, help="Also send report to Telegram")
 @click.option("--watchlists", is_flag=True, help="Write proposed watchlists for AI_trader")
-def report_run(no_screener: bool, telegram: bool, watchlists: bool) -> None:
+@click.option("--options", is_flag=True, help="Also fetch options chain + UOA + flow metrics")
+@click.option("--options-top", default=20, help="Run options pipeline for top N symbols")
+def report_run(
+    no_screener: bool, telegram: bool, watchlists: bool,
+    options: bool, options_top: int,
+) -> None:
     """Run the full daily pipeline and write the markdown report."""
     from src.recommend.daily_pipeline import run_daily_pipeline
 
@@ -162,8 +167,36 @@ def report_run(no_screener: bool, telegram: bool, watchlists: bool) -> None:
         refresh_universe=not no_screener,
         send_telegram=telegram,
         write_watchlists_files=watchlists,
+        run_options=options,
+        options_top_n=options_top,
     )
     click.echo(f"report done: {counts}")
+
+
+@cli.group()
+def options() -> None:
+    """Options flow commands."""
+
+
+@options.command("run")
+@click.option("--symbol", multiple=True, required=True, help="Underlying symbols")
+def options_run(symbol: tuple[str, ...]) -> None:
+    """Fetch chain + detect UOA + compute flow metrics for given symbols."""
+    from datetime import datetime, timedelta, timezone
+
+    from src.alpaca.bars import fetch_daily_bars_batch
+    from src.options.runner import run_options_pipeline
+
+    syms = list(symbol)
+    bars = fetch_daily_bars_batch(syms, days=5)
+    prices = {s: float(b["close"].iloc[-1]) for s, b in bars.items() if not b.empty}
+
+    now = datetime.now(timezone.utc)
+    today = now.strftime("%Y-%m-%d")
+    window_start = (now - timedelta(hours=24)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    summary = run_options_pipeline(syms, prices, today, window_start)
+    click.echo(f"options done: {summary}")
 
 
 @cli.group()

@@ -12,7 +12,60 @@ from src.logger import logger
 SCHEMA_FILE = Path(__file__).parent / "schema.sql"
 
 # Future migrations: (version, sql_string). Version 1 is schema.sql.
-MIGRATIONS: list[tuple[int, str]] = []
+MIGRATIONS: list[tuple[int, str]] = [
+    (
+        2,
+        # Daily snapshot of an option chain (one row per contract per day).
+        # Used for derived metrics (P/C ratio, IV skew, near-the-money count).
+        """
+        CREATE TABLE IF NOT EXISTS option_snapshots (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            symbol TEXT NOT NULL,
+            contract_symbol TEXT NOT NULL,
+            option_type TEXT NOT NULL CHECK(option_type IN ('call','put')),
+            strike REAL NOT NULL,
+            expiration TEXT NOT NULL,
+            iv REAL,
+            delta REAL,
+            gamma REAL,
+            theta REAL,
+            vega REAL,
+            rho REAL,
+            bid REAL,
+            ask REAL,
+            last_price REAL,
+            last_size INTEGER,
+            otm_pct REAL,
+            ts TEXT NOT NULL,
+            as_of TEXT NOT NULL,
+            ingested_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+            UNIQUE(contract_symbol, as_of)
+        );
+        CREATE INDEX IF NOT EXISTS idx_snap_symbol_as_of ON option_snapshots(symbol, as_of);
+        CREATE INDEX IF NOT EXISTS idx_snap_otm ON option_snapshots(symbol, as_of, otm_pct);
+        """,
+    ),
+    (
+        3,
+        # Per-day option flow summary (P/C ratio, IV skew, smart money score).
+        """
+        CREATE TABLE IF NOT EXISTS option_flow (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            symbol TEXT NOT NULL,
+            as_of TEXT NOT NULL,
+            call_count INTEGER DEFAULT 0,
+            put_count INTEGER DEFAULT 0,
+            put_call_ratio REAL,
+            iv_skew_25d REAL,
+            uoa_count INTEGER DEFAULT 0,
+            smart_money_score REAL,
+            created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+            UNIQUE(symbol, as_of)
+        );
+        CREATE INDEX IF NOT EXISTS idx_flow_as_of ON option_flow(as_of DESC);
+        """,
+    ),
+]
 
 
 def current_version(conn) -> int:

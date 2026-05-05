@@ -20,6 +20,7 @@ from src.db.repos import (
 )
 from src.indicators.technical import compute_all
 from src.logger import logger
+from src.options.runner import run_options_pipeline
 from src.output.markdown_report import render_report, write_report
 from src.output.telegram import send_daily_summary
 from src.output.watchlist_writer import write_watchlists
@@ -34,6 +35,8 @@ def run_daily_pipeline(
     batch_size: int = 50,
     send_telegram: bool = False,
     write_watchlists_files: bool = False,
+    run_options: bool = False,
+    options_top_n: int = 20,
 ) -> dict:
     """Run the full daily pipeline. Returns counts + report path."""
     now = datetime.now(timezone.utc)
@@ -58,6 +61,23 @@ def run_daily_pipeline(
     for i in range(0, len(universe), batch_size):
         chunk = universe[i : i + batch_size]
         bars_by_symbol.update(fetch_daily_bars_batch(chunk, days=260))
+
+    # 3.5 Options pipeline (top-N by volume to bound API cost)
+    options_summary = {}
+    if run_options:
+        # Pick top N by today's volume from bars
+        ranked = sorted(
+            ((sym, df["volume"].iloc[-1]) for sym, df in bars_by_symbol.items() if not df.empty),
+            key=lambda x: -x[1],
+        )
+        opt_symbols = [s for s, _ in ranked[:options_top_n]]
+        underlying_prices = {
+            s: float(bars_by_symbol[s]["close"].iloc[-1])
+            for s in opt_symbols if not bars_by_symbol[s].empty
+        }
+        options_summary = run_options_pipeline(
+            opt_symbols, underlying_prices, today, window_start_iso
+        )
 
     # 4. Compute & persist technicals + heat scores
     technicals_n = 0
@@ -150,6 +170,7 @@ def run_daily_pipeline(
         "report_path": str(report_path),
         "telegram": telegram_ok,
         **{k: v for k, v in watchlist_info.items() if k.endswith("_n")},
+        **options_summary,
     }
     logger.info(f"=== daily pipeline done: {counts} ===")
     return counts
